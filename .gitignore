@@ -1,0 +1,23 @@
+# Dependencies and generated output
+node_modules/
+coverage/
+dist/
+build/
+*.log
+
+# Local environment files and credentials
+.env
+.env.*
+!.env.example
+.kube/
+.docker/
+.colima/
+.aws/
+*.pem
+*.key
+
+# Local editor and operating system files
+.DS_Store
+.idea/
+*.swp
+*.swo
