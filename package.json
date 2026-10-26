@@ -1,0 +1,20 @@
+{
+  "name": "storagelab",
+  "version": "1.0.0",
+  "description": "A self-service platform that lets users request Kubernetes storage workspaces and track their provisioning status.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/juexuanl/StorageLab.git"
+  },
+  "keywords": [],
+  "author": "Zoey Long",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/juexuanl/StorageLab/issues"
+  },
+  "homepage": "https://github.com/juexuanl/StorageLab#readme"
+}

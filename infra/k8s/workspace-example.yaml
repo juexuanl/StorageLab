@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: storagelab
+---
+apiVersion: storagelab.example.com/v1alpha1
+kind: StorageWorkspace
+metadata:
+  name: training-data
+  namespace: storagelab
+spec:
+  sizeGiB: 1
