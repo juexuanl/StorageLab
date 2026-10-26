@@ -29,6 +29,15 @@ function expectStatus(response, expected) {
         `Expected HTTP ${expected}, received ${response.status}: ${response.text}`);
 }
 
+function expectWorkspace(actual, expected) {
+    const { status, ...details } = actual;
+
+    assert.deepEqual(details, expected);
+    assert.ok(['Pending', 'Ready'].includes(status.phase));
+    assert.equal(typeof status.message, 'string');
+    assert.ok(status.message.length > 0);
+}
+
 test('GET /health reports a healthy server', async () => {
     const response = await request('GET', '/health');
     expectStatus(response, 200);
@@ -59,7 +68,14 @@ test('Invalid requests return 400 without changing the workspace list', async ()
 
     const after = await request('GET', '/workspaces');
     expectStatus(after, 200);
-    assert.deepEqual(after.data, before.data);
+    const withoutStatus = workspaces => workspaces.map(
+        ({ status, ...workspace }) => workspace
+    );
+
+    assert.deepEqual(
+        withoutStatus(after.data.workspaces),
+        withoutStatus(before.data.workspaces)
+    );
 });
 
 test('Unknown workspace IDs return 404 for queries and deletion', async () => {
@@ -81,8 +97,11 @@ test('Workspace lifecycle: create, reject duplicate, query, delete, and verify r
         expectStatus(created, 201);
         assert.equal(typeof workspaceId, 'string');
         assert.ok(workspaceId.length > 0);
-        assert.deepEqual(created.data.workspace, { id: workspaceId, name, sizeGiB: 1 });
-
+        expectWorkspace(created.data.workspace, {
+            id: workspaceId,
+            name,
+            sizeGiB: 1
+        });
         const duplicate = await request('POST', '/workspaces', { name, sizeGiB: 1 });
         expectStatus(duplicate, 409);
 
@@ -93,7 +112,11 @@ test('Workspace lifecycle: create, reject duplicate, query, delete, and verify r
         const path = `/workspaces/${encodeURIComponent(workspaceId)}`;
         const found = await request('GET', path);
         expectStatus(found, 200);
-        assert.deepEqual(found.data, created.data);
+        expectWorkspace(found.data.workspace, {
+            id: workspaceId,
+            name,
+            sizeGiB: 1
+        });
 
         const deleted = await request('DELETE', path);
         expectStatus(deleted, 204);

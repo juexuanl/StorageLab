@@ -1,0 +1,12 @@
+{
+  "name": "storagelab-operator",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@kubernetes/client-node": "2.0.1"
+  }
+}

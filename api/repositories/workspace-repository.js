@@ -12,6 +12,10 @@ function toWorkspace(object) {
         id: object.metadata.uid,
         name: object.metadata.name,
         sizeGiB: object.spec.sizeGiB,
+        status: {
+            phase: object.status?.phase ?? 'Pending',
+            message: object.status?.message ?? 'Waiting for operator reconciliation'
+        }
     };
 }
 
