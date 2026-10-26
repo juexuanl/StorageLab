@@ -27,6 +27,13 @@ async function createWorkspace(req, res, next) {
     if(typeof name !== 'string' || name.trim() === '') {
         return res.status(400).json({error: 'Name must be a non-empty string'});
     }
+    const validName = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
+
+    if (!validName.test(name.trim())) {
+        return res.status(400).json({
+            error: 'name must be 1-63 lowercase letters, digits, or hyphens, starting and ending with a letter or digit'
+        });
+    }
     if(!Number.isInteger(sizeGiB) || sizeGiB <= 0) {
         return res.status(400).json({error: 'Size must be a positive integer'});
     }

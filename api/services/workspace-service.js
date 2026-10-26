@@ -1,4 +1,3 @@
-const { randomUUID } = require('node:crypto');
 const workspaceRepository = require('../repositories/workspace-repository');
 
 
@@ -15,7 +14,7 @@ async function createWorkspace(name, sizeGiB) {
     if(exist) {
         return null;
     }
-    return workspaceRepository.save({id: randomUUID(), name, sizeGiB});
+    return workspaceRepository.save({ name, sizeGiB});
 }
 
 async function deleteWorkspace(id) {
