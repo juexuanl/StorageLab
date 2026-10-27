@@ -166,15 +166,77 @@ See [the test guide](api/tests/README.md) for details.
 
 ## Environment lifecycle
 
-Run from the project root on the configured Mac:
+### Safe shutdown
+
+1. Press Ctrl+C in the terminals running Vite, the Express API, and the Operator.
+   Stop any old local port-forward or cloudflared processes the same way.
+   Stopping these processes does not delete workspace resources or PVCs.
+2. From the project root, gracefully stop the existing VM:
 
 ```sh
-./storagelab.sh status
+cd /Users/juexuanlong/Documents/Codex/StorageLab
 ./storagelab.sh stop
+./storagelab.sh status
 ```
 
-Stop releases runtime CPU and memory while preserving the cluster and disk data.
-Stop the local API, Operator, and Vite processes with Ctrl+C when finished.
+3. Confirm that the VM state is `Stopped` before shutting down the Mac.
+
+The stop script runs `colima stop storagelab`. It releases runtime CPU and memory
+while preserving the existing VM disk, cluster, containers, and volume data.
+Cluster workloads, including the gateway and cloudflared, stop with the VM; do not
+delete them individually. There is no need to run `public-access.sh stop` for a
+normal daily shutdown.
+
+### Start the next day
+
+1. Restore the same VM and cluster, then wait for `StorageLab is ready.`:
+
+```sh
+cd /Users/juexuanlong/Documents/Codex/StorageLab
+./storagelab.sh start
+```
+
+2. Load the dedicated project connections and inspect existing resources:
+
+```sh
+source ./init.sh
+kubectl get pvc,pods -n storagelab
+```
+
+Existing PVCs should remain `Bound`. Allow time for worker Pods to return to
+`Running` with `1/1` ready containers. The saved gateway and cloudflared Deployments
+recover automatically; a normal restart does not require reapplying manifests or
+running `public-access.sh start`.
+
+3. Open three terminals at the project root and start these processes in order:
+
+```sh
+# Terminal 1: reconcile existing resources and refresh public URLs
+npm --prefix operator start
+
+# Terminal 2: REST API
+npm --prefix api start
+
+# Terminal 3: React development server
+npm --prefix web run dev
+```
+
+4. Open the address printed by Vite, wait for workspaces to show `Ready`, and use
+   **Open website**. A Quick Tunnel restart may change the public hostname; the
+   Operator updates workspace URLs automatically, so use the current UI link
+   rather than an old bookmark.
+
+### Preserve stored files
+
+- Keep the existing VM, kind cluster, namespace, workspaces, and PVCs. Do not
+  recreate the environment as part of a daily restart.
+- Deleting a workspace through the UI, API, or kubectl also deletes its owned PVC
+  and can permanently remove its files. Deleting the namespace, cluster, Colima
+  profile, or underlying storage can also destroy data.
+- Normal stop/start and Pod recreation preserve files while the PVC and backing
+  disk remain intact. They are not backups and cannot protect against disk loss
+  or accidental deletion. Back up important files outside the VM separately.
+- Git stores project source code, not the files saved in PVCs.
 
 For manual commands, select the project environment first:
 
