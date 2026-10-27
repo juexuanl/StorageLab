@@ -1,5 +1,4 @@
 const workspaceRepository = require('../repositories/workspace-repository');
-const { closeWorkspaceAccess } = require('./workspace-access-service');
 
 
 async function listWorkspaces() {
@@ -19,9 +18,7 @@ async function createWorkspace(name, sizeGiB, webEnabled = false) {
 }
 
 async function deleteWorkspace(id) {
-    const deleted = await workspaceRepository.deleteById(id);
-    await closeWorkspaceAccess(id);
-    return deleted;
+    return workspaceRepository.deleteById(id);
 }
 
 module.exports = {

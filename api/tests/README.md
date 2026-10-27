@@ -23,17 +23,17 @@ If deletion is broken, a test record may remain until the server restarts.
 
 ## Automatic website access
 
-With the API and Operator running, verify the browser access listeners:
+With the API, Operator, and shared public entrance running, verify public access:
 
 ```bash
 npm --prefix api run test:access
 ```
 
 This integration test creates two temporary web-enabled workspaces and waits for
-the Operator to make them Ready. It checks HTTP forwarding, distinct local ports,
-listener reuse, missing-file responses, and listener shutdown after deletion.
-Only the workspaces created by the test are removed. Run it on the Mac hosting
-the API because the returned access addresses listen on loopback only.
+the Operator to make them Ready. It checks distinct paths on a shared HTTPS
+origin, repeat access, missing-file responses, and cleanup after deletion.
+Only the workspaces created by the test are removed. Cloudflare connectivity is
+required. See [shared public access](../../docs/shared-public-access.md).
 
 To test a different local port:
 

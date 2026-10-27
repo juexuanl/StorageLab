@@ -19,13 +19,13 @@ async function waitUntilReady(id) {
         const response = await request(`/workspaces/${id}`);
         assert.equal(response.status, 200);
         const { workspace } = await response.json();
-        if (workspace.status.phase === 'Ready') return;
+        if (workspace.status.phase === 'Ready' && workspace.publicUrl) return;
         await delay(1000);
     }
     assert.fail('Workspace did not become Ready. Start the Operator before this test.');
 }
 
-test('Web access provides separate reusable listeners and closes them on deletion', {
+test('Web workspaces automatically receive distinct paths on one shared public origin', {
     timeout: 120000
 }, async () => {
     const created = [];
@@ -53,7 +53,10 @@ test('Web access provides separate reusable listeners and closes them on deletio
             assert.equal(response.status, 302);
             assert.equal(response.headers.get('cache-control'), 'no-store');
             workspace.url = response.headers.get('location');
-            assert.equal(new URL(workspace.url).hostname, '127.0.0.1');
+            const url = new URL(workspace.url);
+            assert.equal(url.protocol, 'https:');
+            assert.match(url.hostname, /^[a-z0-9-]+\.trycloudflare\.com$/);
+            assert.match(url.pathname, /^\/workspaces\/access-[a-f0-9-]+\/$/);
 
             const repeated = await request(path);
             assert.equal(repeated.headers.get('location'), workspace.url);
@@ -64,7 +67,7 @@ test('Web access provides separate reusable listeners and closes them on deletio
             assert.equal(homepage.status, 200);
             assert.match(await homepage.text(), /StorageLab Web Workspace/);
 
-            const missing = await fetch(new URL('/missing-file', workspace.url), {
+            const missing = await fetch(new URL('missing-file', workspace.url), {
                 signal: AbortSignal.timeout(10000)
             });
             assert.equal(missing.status, 404);
@@ -72,17 +75,15 @@ test('Web access provides separate reusable listeners and closes them on deletio
         }
 
         assert.notEqual(created[0].url, created[1].url);
+        assert.equal(new URL(created[0].url).origin, new URL(created[1].url).origin);
     } finally {
         for (const workspace of created) {
             const removed = await request(`/workspaces/${workspace.id}`, {
                 method: 'DELETE'
             });
             assert.ok([204, 404].includes(removed.status), 'Test workspace cleanup failed');
-            if (workspace.url) {
-                await assert.rejects(fetch(workspace.url, {
-                    signal: AbortSignal.timeout(2000)
-                }), 'The local access listener should close after deletion');
-            }
+            const access = await request(`/workspaces/${workspace.id}/access`);
+            assert.equal(access.status, 404);
         }
     }
 });

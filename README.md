@@ -4,8 +4,8 @@ StorageLab is a Kubernetes-backed service for creating and managing persistent
 storage workspaces. Users request a workspace through a React interface or REST
 API, and a Node.js Operator provisions a PersistentVolumeClaim (PVC) and a worker
 Pod, reports readiness, and recreates the Pod if it is deleted. Workspaces can
-optionally serve website files from their persistent storage, with browser access
-managed by the API.
+optionally serve website files from their persistent storage. Web workspaces
+automatically receive paths on one shared public tunnel and in-cluster gateway.
 
 ## Features
 
@@ -19,8 +19,9 @@ managed by the API.
 - Retain files across Pod recreation by mounting the same PVC at `/data`.
 - Serve web-enabled workspace files from `/data/public` on Pod port 8080, exposed
   internally through a ClusterIP Service on port 80.
-- Open workspace websites on the local Mac without manually running
-  `kubectl port-forward`. Each workspace receives a separate loopback port.
+- Open every web workspace through `/workspaces/<name>/` on the shared HTTPS
+  entrance, without per-workspace tunnels or Kubernetes API traffic forwarding.
+- Automatically update public URLs when the Quick Tunnel Pod is replaced.
 - Delete workspace definitions and let Kubernetes garbage collection remove their
   owned Pods, Services, and PVCs. The UI asks for confirmation before deletion.
 
@@ -40,9 +41,10 @@ The API uses a Route -> Controller -> Service -> Repository structure. The
 Repository reads and writes custom resources through the Kubernetes API instead
 of storing workspace records in application memory.
 
-The Operator runs as a separate local process. It marks a workspace `Ready` when
-its PVC is bound and its Pod has a `Ready=True` condition. Each managed resource
-has an owner reference to its workspace.
+The Operator runs as a separate local process. A workspace needs a bound PVC and
+a ready worker Pod. Web workspaces also require the shared gateway and tunnel.
+Workspace-owned resources use owner references; shared infrastructure does not
+belong to an individual workspace.
 
 ## Project layout
 
@@ -50,7 +52,8 @@ has an owner reference to its workspace.
 api/                          Express API, Kubernetes clients, and integration tests
 operator/                     Workspace reconciliation and status updates
 web/                          React interface and Vite development server
-docs/workspace-access.md       Local website forwarding and lifecycle details
+gateway/                      Shared HTTP route proxy and tests
+docs/shared-public-access.md   Shared tunnel, routing, base paths, and lifecycle
 infra/k8s/                    StorageWorkspace CRD and example resource
 infra/kind/cluster.yaml        Single-node kind cluster configuration
 infra/kind/README.md           Local environment documentation
@@ -63,7 +66,7 @@ storagelab.sh                 Start, stop, or inspect the existing environment
 
 The current setup uses Node.js 24, a dedicated Colima profile, and a single-node
 kind cluster named `storagelab`. The API, Operator, and React development server
-run on the Mac; workspace Pods run inside the cluster.
+run on the Mac; workspace Pods and the public tunnel run inside the cluster.
 
 The environment must already be provisioned, with the CRD and `storagelab`
 namespace applied. See [the environment guide](infra/kind/README.md). The scripts
@@ -101,9 +104,15 @@ Open the address printed by Vite. Its development proxy forwards `/api` requests
 to the Express API on port 3000. Create a workspace, wait for `Ready`, and use
 **Open website** if the Web Server option was enabled.
 
-Website access is local to the Mac running the API. It does not publish a public
-website. See [local website access](docs/workspace-access.md) for forwarding
-behavior and URL lifecycle.
+Bootstrap or update the shared public entrance:
+
+```sh
+bash scripts/public-access.sh start
+```
+
+Every Web Server request then receives its own public path automatically.
+See [shared public access](docs/shared-public-access.md) for the traffic path,
+relative website assets, temporary hostname updates, and cleanup commands.
 
 ## REST API
 
@@ -114,7 +123,7 @@ behavior and URL lifecycle.
 | POST | `/workspaces` | Create a workspace |
 | GET | `/workspaces/:id` | Retrieve a workspace by Kubernetes UID |
 | DELETE | `/workspaces/:id` | Delete a workspace |
-| GET | `/workspaces/:id/access` | Redirect to a local listener for a ready web-enabled workspace |
+| GET | `/workspaces/:id/access` | Redirect to the ready workspace's shared public URL |
 
 Example creation request:
 
@@ -143,8 +152,8 @@ npm --prefix api run test:access
 ```
 
 These tests create temporary workspace resources and clean up their own records.
-The website access test checks readiness, HTTP forwarding, separate local ports,
-listener reuse, missing-file responses, and listener shutdown after deletion.
+The website access test checks readiness, separate paths on one shared public
+origin, repeat access, missing files, and API cleanup after deletion.
 
 Check and build the frontend:
 

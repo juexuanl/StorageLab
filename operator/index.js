@@ -2,6 +2,7 @@ import { KubeConfig, CustomObjectsApi, CoreV1Api } from '@kubernetes/client-node
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
+import { refreshPublicAccess } from './lib/public-access.js';
 
 const namespace = 'storagelab';
 const workspaceLabel = 'storagelab.example.com/workspace-uid';
@@ -229,7 +230,7 @@ async function ensurePod(coreApi, workspace, pvc) {
     }
 }
 
-async function updateWorkspaceStatus(customObjectsApi, workspace, pvc, pod) {
+async function updateWorkspaceStatus(customObjectsApi, workspace, pvc, pod, publicAccess) {
     const pvcBound = pvc.status?.phase === 'Bound';
     const podReady = !pod.metadata.deletionTimestamp
         && pod.status?.conditions?.some(
@@ -237,16 +238,26 @@ async function updateWorkspaceStatus(customObjectsApi, workspace, pvc, pod) {
                 && condition.status === 'True'
         );
 
+    const webEnabled = workspace.spec.webEnabled === true;
+    const ready = pvcBound && podReady && (!webEnabled || publicAccess.ready);
     const status = {
-        phase: pvcBound && podReady ? 'Ready' : 'Pending',
-        message: pvcBound && podReady
-            ? 'Storage is bound and the worker is ready'
-            : 'Waiting for storage binding or worker readiness'
+        phase: ready ? 'Ready' : 'Pending',
+        message: ready
+            ? (webEnabled
+                ? 'Storage, Web Server, and shared public gateway are ready'
+                : 'Storage is bound and the worker is ready')
+            : (pvcBound && podReady && webEnabled
+                ? 'Waiting for the shared public gateway and tunnel'
+                : 'Waiting for storage binding or worker readiness'),
+        publicUrl: webEnabled && publicAccess.ready
+            ? `${publicAccess.baseUrl}/workspaces/${workspace.metadata.name}/`
+            : ''
     };
 
     if (
         workspace.status?.phase === status.phase
         && workspace.status?.message === status.message
+        && workspace.status?.publicUrl === status.publicUrl
     ) {
         return;
     }
@@ -370,6 +381,13 @@ async function main() {
                 plural: 'storageworkspaces'
             });
 
+            let publicAccess = { ready: false, baseUrl: '' };
+            try {
+                publicAccess = await refreshPublicAccess(coreApi);
+            } catch (error) {
+                console.error('Failed to refresh shared public access:', error);
+            }
+
             for (const workspace of result.items) {
                 if (workspace.metadata.deletionTimestamp) {
                     continue;
@@ -392,7 +410,8 @@ async function main() {
                         customObjectsApi,
                         workspace,
                         pvc,
-                        pod
+                        pod,
+                        publicAccess
                     );
 
                     console.log('Workspace reconciled:', {

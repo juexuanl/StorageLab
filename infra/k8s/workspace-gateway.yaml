@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: workspace-gateway
+  namespace: storagelab
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: workspace-gateway
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: workspace-gateway
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: gateway
+          image: node:24-alpine
+          command: ["node", "/app/server.cjs"]
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 3
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: code
+              mountPath: /app
+              readOnly: true
+      volumes:
+        - name: code
+          configMap:
+            name: workspace-gateway-code
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: workspace-gateway
+  namespace: storagelab
+spec:
+  selector:
+    app.kubernetes.io/name: workspace-gateway
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

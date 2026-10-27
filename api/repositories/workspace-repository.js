@@ -1,4 +1,5 @@
 const { createCustomObjectsClient } = require('../lib/kubernetes-client');
+const { validatePublicUrl } = require('../lib/public-url');
 
 const resource = {
     group: 'storagelab.example.com',
@@ -14,6 +15,9 @@ function toWorkspace(object) {
         sizeGiB: object.spec.sizeGiB,
         webEnabled: object.spec.webEnabled === true,
         port: object.spec.webEnabled === true ? 8080 : null,
+        publicUrl: object.spec.webEnabled === true
+            ? validatePublicUrl(object.status?.publicUrl, object.metadata.name)
+            : null,
         status: {
             phase: object.status?.phase ?? 'Pending',
             message: object.status?.message ?? 'Waiting for operator reconciliation'

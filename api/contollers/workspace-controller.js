@@ -1,5 +1,4 @@
 const workspaceService = require('../services/workspace-service');
-const { getWorkspaceAccessUrl } = require('../services/workspace-access-service');
 
 async function openWorkspace(req, res, next) {
     try {
@@ -13,9 +12,12 @@ async function openWorkspace(req, res, next) {
         if (workspace.status.phase !== 'Ready') {
             return res.status(409).json({error: 'Workspace is not ready yet'});
         }
+        if (!workspace.publicUrl) {
+            return res.status(409).json({error: 'Public website access is not ready yet'});
+        }
 
         res.set('Cache-Control', 'no-store');
-        return res.redirect(302, await getWorkspaceAccessUrl(workspace));
+        return res.redirect(302, workspace.publicUrl);
     } catch (error) {
         next(error);
     }

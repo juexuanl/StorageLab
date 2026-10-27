@@ -273,12 +273,12 @@ function App() {
                                                 <button
                                                     type="button"
                                                     aria-label={`Open website ${workspace.name}`}
-                                                    disabled={workspace.status.phase !== 'Ready'}
-                                                    title={workspace.status.phase === 'Ready'
-                                                        ? 'Open this website on this Mac'
-                                                        : 'Waiting for the Web Server to become ready'}
+                                                    disabled={workspace.status.phase !== 'Ready' || !workspace.publicUrl}
+                                                    title={workspace.status.phase === 'Ready' && workspace.publicUrl
+                                                        ? 'Open the website through the shared cluster gateway'
+                                                        : 'Waiting for the Web Server and shared public gateway'}
                                                     onClick={() => window.open(
-                                                        `/api/workspaces/${encodeURIComponent(workspace.id)}/access`,
+                                                        workspace.publicUrl,
                                                         '_blank',
                                                         'noopener,noreferrer'
                                                     )}

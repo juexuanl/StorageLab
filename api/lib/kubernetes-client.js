@@ -17,9 +17,4 @@ async function createCustomObjectsClient() {
     return kubeConfig.makeApiClient(k8s.CustomObjectsApi);
 }
 
-async function createPortForwardClient() {
-    const { k8s, kubeConfig } = await loadKubernetesConfig();
-    return new k8s.PortForward(kubeConfig);
-}
-
-module.exports = { createCustomObjectsClient, createPortForwardClient };
+module.exports = { createCustomObjectsClient };

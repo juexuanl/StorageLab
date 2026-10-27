@@ -4,7 +4,7 @@
   "main": "hello.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test tests/api.test.js",
+    "test": "node --test tests/api.test.js tests/public-url.test.js",
     "test:access": "node --test tests/web-access.test.js"
   },
   "keywords": [],

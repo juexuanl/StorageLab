@@ -30,7 +30,7 @@ function expectStatus(response, expected) {
 }
 
 function expectWorkspace(actual, expected) {
-    const { status, ...details } = actual;
+    const { status, publicUrl, ...details } = actual;
 
     assert.deepEqual(details, {
         webEnabled: false,
@@ -40,6 +40,14 @@ function expectWorkspace(actual, expected) {
     assert.ok(['Pending', 'Ready'].includes(status.phase));
     assert.equal(typeof status.message, 'string');
     assert.ok(status.message.length > 0);
+    if (actual.webEnabled && publicUrl !== null) {
+        const url = new URL(publicUrl);
+        assert.equal(url.protocol, 'https:');
+        assert.match(url.hostname, /^[a-z0-9-]+\.trycloudflare\.com$/);
+        assert.equal(url.pathname, `/workspaces/${actual.name}/`);
+    } else {
+        assert.equal(publicUrl, null);
+    }
 }
 
 test('GET /health reports a healthy server', async () => {
@@ -77,7 +85,7 @@ test('Invalid requests return 400 without changing the workspace list', async ()
     const after = await request('GET', '/workspaces');
     expectStatus(after, 200);
     const withoutStatus = workspaces => workspaces.map(
-        ({ status, ...workspace }) => workspace
+        ({ status, publicUrl, ...workspace }) => workspace
     );
 
     assert.deepEqual(
