@@ -1,5 +1,5 @@
 const express = require('express');
-const { listWorkspaces, createWorkspace, getWorkspaceById, deleteWorkspace } = require('./contollers/workspace-controller');
+const { listWorkspaces, createWorkspace, getWorkspaceById, deleteWorkspace, openWorkspace } = require('./contollers/workspace-controller');
 
 const app = express();
 app.use(express.json());
@@ -11,6 +11,7 @@ app.get('/health', (req, res) => {
 
 app.get('/workspaces', listWorkspaces);
 app.get('/workspaces/:id', getWorkspaceById);
+app.get('/workspaces/:id/access', openWorkspace);
 app.post('/workspaces', createWorkspace);
 app.delete('/workspaces/:id', deleteWorkspace);
 

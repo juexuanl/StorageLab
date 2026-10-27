@@ -12,6 +12,8 @@ function toWorkspace(object) {
         id: object.metadata.uid,
         name: object.metadata.name,
         sizeGiB: object.spec.sizeGiB,
+        webEnabled: object.spec.webEnabled === true,
+        port: object.spec.webEnabled === true ? 8080 : null,
         status: {
             phase: object.status?.phase ?? 'Pending',
             message: object.status?.message ?? 'Waiting for operator reconciliation'
@@ -60,7 +62,8 @@ async function save(workspace) {
                     namespace: resource.namespace
                 },
                 spec: {
-                    sizeGiB: workspace.sizeGiB
+                    sizeGiB: workspace.sizeGiB,
+                    webEnabled: workspace.webEnabled
                 }
             }
         });

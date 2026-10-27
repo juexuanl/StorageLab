@@ -21,6 +21,20 @@ deletion, and unknown IDs. They create a uniquely named workspace and attempt to
 delete it afterward. They do not require an empty list or remove existing records.
 If deletion is broken, a test record may remain until the server restarts.
 
+## Automatic website access
+
+With the API and Operator running, verify the browser access listeners:
+
+```bash
+npm --prefix api run test:access
+```
+
+This integration test creates two temporary web-enabled workspaces and waits for
+the Operator to make them Ready. It checks HTTP forwarding, distinct local ports,
+listener reuse, missing-file responses, and listener shutdown after deletion.
+Only the workspaces created by the test are removed. Run it on the Mac hosting
+the API because the returned access addresses listen on loopback only.
+
 To test a different local port:
 
 ```bash

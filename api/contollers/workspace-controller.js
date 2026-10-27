@@ -1,4 +1,25 @@
 const workspaceService = require('../services/workspace-service');
+const { getWorkspaceAccessUrl } = require('../services/workspace-access-service');
+
+async function openWorkspace(req, res, next) {
+    try {
+        const workspace = await workspaceService.getWorkspaceById(req.params.id);
+        if (!workspace) {
+            return res.status(404).json({error: 'Workspace not found'});
+        }
+        if (!workspace.webEnabled) {
+            return res.status(409).json({error: 'Web Server is not enabled for this workspace'});
+        }
+        if (workspace.status.phase !== 'Ready') {
+            return res.status(409).json({error: 'Workspace is not ready yet'});
+        }
+
+        res.set('Cache-Control', 'no-store');
+        return res.redirect(302, await getWorkspaceAccessUrl(workspace));
+    } catch (error) {
+        next(error);
+    }
+}
 
 async function listWorkspaces(req, res, next) {
     try{
@@ -23,7 +44,7 @@ async function getWorkspaceById(req, res, next) {
 }
 
 async function createWorkspace(req, res, next) {
-    const { name, sizeGiB } = req.body ?? {};
+    const { name, sizeGiB, webEnabled = false } = req.body ?? {};
     if(typeof name !== 'string' || name.trim() === '') {
         return res.status(400).json({error: 'Name must be a non-empty string'});
     }
@@ -37,8 +58,11 @@ async function createWorkspace(req, res, next) {
     if(!Number.isInteger(sizeGiB) || sizeGiB <= 0) {
         return res.status(400).json({error: 'Size must be a positive integer'});
     }
+    if (typeof webEnabled !== 'boolean') {
+        return res.status(400).json({error: 'webEnabled must be a boolean'});
+    }
     try{
-        const workspace = await workspaceService.createWorkspace(name.trim(), sizeGiB);
+        const workspace = await workspaceService.createWorkspace(name.trim(), sizeGiB, webEnabled);
         if(workspace === null) {
             return res.status(409).json({error: 'Workspace with this name already exists'});
         }
@@ -61,6 +85,7 @@ async function deleteWorkspace(req, res, next) {
 }
 
 module.exports = {
+    openWorkspace,
     listWorkspaces,
     createWorkspace,
     getWorkspaceById,
