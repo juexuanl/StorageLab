@@ -1,6 +1,8 @@
 const { homedir } = require('node:os');
 const { join } = require('node:path');
 
+let customObjectsClientPromise;
+
 async function loadKubernetesConfig() {
     const k8s = await import('@kubernetes/client-node');
     const kubeConfig = new k8s.KubeConfig();
@@ -12,9 +14,19 @@ async function loadKubernetesConfig() {
     return { k8s, kubeConfig };
 }
 
-async function createCustomObjectsClient() {
-    const { k8s, kubeConfig } = await loadKubernetesConfig();
-    return kubeConfig.makeApiClient(k8s.CustomObjectsApi);
+function createCustomObjectsClient() {
+    if (!customObjectsClientPromise) {
+        customObjectsClientPromise = loadKubernetesConfig()
+            .then(({ k8s, kubeConfig }) =>
+                kubeConfig.makeApiClient(k8s.CustomObjectsApi)
+            )
+            .catch(error => {
+                customObjectsClientPromise = undefined;
+                throw error;
+            });
+    }
+
+    return customObjectsClientPromise;
 }
 
 module.exports = { createCustomObjectsClient };
