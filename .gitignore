@@ -3,6 +3,8 @@ node_modules/
 coverage/
 dist/
 build/
+/output/
+/tmp/
 *.log
 
 # Local environment files and credentials
